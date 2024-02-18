@@ -1,91 +1,91 @@
-const http = require("http");
-const url = require("url");
-const querystring = require("querystring");
+const httpLib = require("http");
+const urlLib = require("url");
+const queryStringLib = require("querystring");
 
-// Dictionary storage
-const dictionary = [];
-let requestCount = 0;
+// Storage for word definitions
+const wordBank = [];
+let apiCallCount = 0;
 
-const server = http.createServer((req, res) => {
-  const parsedUrl = url.parse(req.url);
-  const path = parsedUrl.pathname;
-  const queryString = querystring.parse(parsedUrl.query);
+const webServer = httpLib.createServer((request, response) => {
+  const urlParsed = urlLib.parse(request.url);
+  const endpoint = urlParsed.pathname;
+  const queryParameters = queryStringLib.parse(urlParsed.query);
 
-  // Enable CORS
-  res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader("Access-Control-Allow-Methods", "OPTIONS, GET, POST");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+  // Setup for Cross-Origin Resource Sharing
+  response.setHeader("Access-Control-Allow-Origin", "*");
+  response.setHeader("Access-Control-Allow-Methods", "OPTIONS, GET, POST");
+  response.setHeader("Access-Control-Allow-Headers", "Content-Type");
 
-  // Increment request count for each API call
-  requestCount++;
+  // Log each API request
+  apiCallCount++;
 
-  // Handle preflight requests
-  if (req.method === "OPTIONS") {
-    res.writeHead(204);
-    res.end();
+  // Handle CORS preflight
+  if (request.method === "OPTIONS") {
+    response.writeHead(204);
+    response.end();
     return;
   }
 
-  if (path === "/api/definitions/" && req.method === "GET") {
-    // Search for a word definition
-    const word = queryString.word.toLowerCase();
-    const definition = dictionary.find((entry) => entry.word === word);
-    if (definition) {
-      res.writeHead(200, { "Content-Type": "application/json" });
-      res.end(
+  if (endpoint === "/api/definitions/" && request.method === "GET") {
+    // Attempt to find a word's definition
+    const searchTerm = queryParameters.word.toLowerCase();
+    const foundDefinition = wordBank.find((item) => item.word === searchTerm);
+    if (foundDefinition) {
+      response.writeHead(200, { "Content-Type": "application/json" });
+      response.end(
         JSON.stringify({
-          requestNumber: requestCount,
-          definition: definition,
+          queryID: apiCallCount,
+          definition: foundDefinition,
         })
       );
     } else {
-      res.writeHead(404, { "Content-Type": "application/json" });
-      res.end(
+      response.writeHead(404, { "Content-Type": "application/json" });
+      response.end(
         JSON.stringify({
-          requestNumber: requestCount,
-          message: `Word '${word}' not found.`,
+          queryID: apiCallCount,
+          message: `The term '${searchTerm}' was not located.`,
         })
       );
     }
-  } else if (path === "/api/definitions" && req.method === "POST") {
-    let body = "";
-    req.on("data", (chunk) => {
-      body += chunk.toString();
+  } else if (endpoint === "/api/definitions" && request.method === "POST") {
+    let requestData = "";
+    request.on("data", (dataPart) => {
+      requestData += dataPart.toString();
     });
-    req.on("end", () => {
-      const { word, definition } = JSON.parse(body);
-      const wordExists = dictionary.some(
-        (entry) => entry.word === word.toLowerCase()
+    request.on("end", () => {
+      const { word, definition } = JSON.parse(requestData);
+      const isDuplicate = wordBank.some(
+        (record) => record.word === word.toLowerCase()
       );
-      if (!wordExists) {
-        dictionary.push({ word: word.toLowerCase(), definition });
-        res.writeHead(201, { "Content-Type": "application/json" });
-        res.end(
+      if (!isDuplicate) {
+        wordBank.push({ word: word.toLowerCase(), definition });
+        response.writeHead(201, { "Content-Type": "application/json" });
+        response.end(
           JSON.stringify({
-            requestNumber: requestCount,
-            totalEntries: dictionary.length,
-            message: `New entry recorded: '${word} : ${definition}'`,
+            queryID: apiCallCount,
+            totalDefinitions: wordBank.length,
+            message: `Definition added: '${word} : ${definition}'`,
           })
         );
       } else {
-        res.writeHead(409, { "Content-Type": "application/json" });
-        res.end(
+        response.writeHead(409, { "Content-Type": "application/json" });
+        response.end(
           JSON.stringify({
-            requestNumber: requestCount,
-            message: `Warning! '${word}' already exists.`,
+            queryID: apiCallCount,
+            message: `Attention! '${word}' is already in the database.`,
           })
         );
       }
     });
   } else {
-    res.writeHead(404, { "Content-Type": "application/json" });
-    res.end(
+    response.writeHead(404, { "Content-Type": "application/json" });
+    response.end(
       JSON.stringify({
-        message: "Endpoint not found.",
+        message: "Requested resource is unavailable.",
       })
     );
   }
 });
 
-const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+const SERVER_PORT = process.env.PORT || 8083;
+webServer.listen(SERVER_PORT, () => console.log(`Web server active on port ${SERVER_PORT}`));
