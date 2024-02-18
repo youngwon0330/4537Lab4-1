@@ -1,0 +1,22 @@
+{
+    "version": 2,
+    "builds": [
+      {
+        "src": "/api/**/*.js",
+        "use": "@vercel/node"
+      }
+    ],
+    "routes": [
+      {
+        "src": "/api/definitions",
+        "methods": ["GET", "POST"],
+        "dest": "/api/app.js"
+      }
+    ],
+    "env": {
+    },
+    "projectSettings": {
+      "framework": "none"
+    }
+  }
+  
