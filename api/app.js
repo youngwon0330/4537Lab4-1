@@ -89,5 +89,4 @@ const server = http.createServer((req, res) => {
     res.statusCode = 404;
     res.setHeader('Content-Type', 'application/json');
     res.end(JSON.stringify({ message: 'Path not found' }));
-  }
-};
+  };
