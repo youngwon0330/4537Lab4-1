@@ -11,7 +11,8 @@
           "src": "/api/definitions",
           "methods": [
               "GET",
-              "POST"
+              "POST",
+              "OPTIONS"
           ],
           "dest": "/api/app.js",
           "headers": {
