@@ -6,10 +6,10 @@ let dictionary = {};
 let requestCounter = 0;
 
 module.exports = async (req, res) => {
-  // Set CORS headers
-  res.setHeader('Access-Control-Allow-Origin', '*'); // Allow all origins
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+   res.setHeader('Access-Control-Allow-Origin', '*');
+   res.setHeader('Access-Control-Allow-Methods', 'POST, GET, OPTIONS');
+   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, requestNumber'); // Add 'requestNumber' to the allowed headers
+   res.setHeader('Access-Control-Allow-Credentials', 'true');
 
   // Handle OPTIONS method (pre-flight request)
   if (req.method.toUpperCase() === 'OPTIONS') {
