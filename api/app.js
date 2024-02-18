@@ -1,107 +1,91 @@
-const http = require('http');
-const url = require('url');
+const { StringDecoder } = require('string_decoder');
+const decoder = new StringDecoder('utf-8');
 
-const dictionary = {};
-let totalRequests = 0;
+// Simple in-memory dictionary for example purposes
+let dictionary = {};
+let requestCounter = 0;
 
-const server = http.createServer((req, res) => {
-    // Set CORS headers
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Access-Control-Allow-Methods', 'POST, GET, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, requestNumber'); // Add 'requestNumber' to the allowed headers
-    res.setHeader('Access-Control-Allow-Credentials', 'true'); // Allow credentials
+const allowCors = fn => async (req, res) => {
+  res.setHeader('Access-Control-Allow-Credentials', true)
+  res.setHeader('Access-Control-Allow-Origin', '*')
+  // another common pattern
+  // res.setHeader('Access-Control-Allow-Origin', req.headers.origin);
+  res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT')
+  res.setHeader(
+    'Access-Control-Allow-Headers',
+    'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version'
+  )
+  if (req.method === 'OPTIONS') {
+    res.status(200).end()
+    return
+  }
+  return await fn(req, res)
+}
 
-    // Handle preflight requests
-    if (req.method === 'OPTIONS') {
-        res.writeHead(200);
-        res.end();
+const handler = (req, res) => {
+  const d = new Date()
+  res.end(d.toString())
+}
+
+module.exports = allowCors(handler)
+
+
+  const { pathname, query } = new URL(req.url, `http://${req.headers.host}`);
+  const path = pathname.replace(/^\/+|\/+$/g, '');
+  const method = req.method.toUpperCase();
+
+  requestCounter++; // Increment request counter
+
+  if (path === 'definitions') {
+    if (method === 'POST') {
+      let buffer = '';
+      for await (const chunk of req) {
+        buffer += decoder.write(chunk);
+      }
+      buffer += decoder.end();
+
+      const { word, definition } = JSON.parse(buffer);
+      if (!word || !definition || typeof word !== 'string' || typeof definition !== 'string') {
+        res.statusCode = 400;
+        res.setHeader('Content-Type', 'application/json');
+        res.end(JSON.stringify({ message: 'Invalid input' }));
         return;
-    }
+      }
 
-    const parsedUrl = url.parse(req.url, true);
-    const pathname = parsedUrl.pathname;
-
-    if (req.method === 'POST' && pathname === '/api/definitions/') {
-        handlePostRequest(req, res);
-    } else if (req.method === 'GET' && pathname === '/api/definitions/') {
-        handleGetRequest(parsedUrl.query, res);
-    } else {
-        res.writeHead(404, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ error: 'Not Found' }));
-    }
-});
-
-function handlePostRequest(req, res) {
-    totalRequests++;
-
-    let data = '';
-
-    req.on('data', (chunk) => {
-        data += chunk.toString();
-    });
-
-    req.on('end', () => {
-        const { word, definition } = JSON.parse(data);
-
-        if (!word || !definition || typeof word !== 'string' || typeof definition !== 'string') {
-            res.writeHead(400, { 'Content-Type': 'application/json' });
-            res.end(JSON.stringify({ error: 'Invalid input. Word and definition must be non-empty strings.' }));
-            return;
-        }
-
-        if (dictionary[word]) {
-            res.writeHead(409, { 'Content-Type': 'application/json' });
-            res.end(JSON.stringify({ message: `Warning! '${word}' already exists.` }));
-            return;
-        }
-
+      if (dictionary[word]) {
+        res.statusCode = 200;
+        res.setHeader('Content-Type', 'application/json');
+        res.end(JSON.stringify({ message: `Warning! ${word} already exists.` }));
+      } else {
         dictionary[word] = definition;
-        const totalEntries = Object.keys(dictionary).length;
-
-        res.writeHead(201, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ 
-            message: 'Definition added successfully!',
-            requestNumber: totalRequests,
-            totalEntries
-        }));
-    });
-}
-
-function handleGetRequest(query, res) {
-    const word = query.word;
-
-    if (!word || typeof word !== 'string') {
-        res.writeHead(400, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ error: 'Invalid input. Word must be a non-empty string.' }));
-        return;
-    }
-
-    const definition = dictionary[word];
-
-    if (!definition) {
-        res.writeHead(404, {
-            'Content-Type': 'application/json',
-            'Access-Control-Expose-Headers': 'requestNumber' // Add this line to expose the 'requestNumber' header
-        });
+        res.statusCode = 200;
+        res.setHeader('Content-Type', 'application/json');
         res.end(JSON.stringify({
-            error: `Request# ${totalRequests}, Word '${word}' not found!`,
-            requestNumber: totalRequests
+          message: `Request #${requestCounter}. New entry recorded: "${word} : ${definition}"`,
+          totalEntries: Object.keys(dictionary).length
         }));
-        return;
+      }
+    } else if (method === 'GET' && query.word) {
+      const word = query.word;
+      const definition = dictionary[word];
+
+      if (definition) {
+        res.statusCode = 200;
+        res.setHeader('Content-Type', 'application/json');
+        res.end(JSON.stringify({ word, definition, requestNumber: requestCounter }));
+      } else {
+        res.statusCode = 404;
+        res.setHeader('Content-Type', 'application/json');
+        res.end(JSON.stringify({ message: `Request# ${requestCounter}, word '${word}' not found!` }));
+      }
+    } else {
+      res.statusCode = 404;
+      res.setHeader('Content-Type', 'application/json');
+      res.end(JSON.stringify({ message: 'Path not found' }));
     }
-
-    res.writeHead(200, {
-        'Content-Type': 'application/json',
-        'Access-Control-Expose-Headers': 'requestNumber' // Add this line to expose the 'requestNumber' header
-    });
-    res.end(JSON.stringify({
-        word,
-        definition,
-        requestNumber: totalRequests
-    }));
-}
-
-const port = 8080;
-server.listen(port, () => {
-    console.log(`Server is running on http://localhost:${port}`);
-});
+  } else {
+    res.statusCode = 404;
+    res.setHeader('Content-Type', 'application/json');
+    res.end(JSON.stringify({ message: 'Path not found' }));
+  }
+};
