@@ -12,11 +12,6 @@
         "methods": ["GET", "POST"],
         "dest": "/api/app.js"
       }
-    ],
-    "env": {
-    },
-    "projectSettings": {
-      "framework": "none"
-    }
+    ]
   }
   
