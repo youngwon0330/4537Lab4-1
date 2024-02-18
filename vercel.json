@@ -2,7 +2,7 @@
   "version": 2,
   "builds": [
       {
-          "src": "./api/**/*.js",
+          "src": "/api/**/*.js",
           "use": "@vercel/node"
       }
   ],
@@ -13,7 +13,7 @@
               "GET",
               "POST"
           ],
-          "dest": "./api/app.js",
+          "dest": "/api/app.js",
           "headers": {
             "Access-Control-Allow-Origin": "*"
           }
