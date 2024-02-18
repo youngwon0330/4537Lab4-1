@@ -5,18 +5,32 @@ const decoder = new StringDecoder('utf-8');
 let dictionary = {};
 let requestCounter = 0;
 
-module.exports = async (req, res) => {
-   res.setHeader('Access-Control-Allow-Origin', '*');
-   res.setHeader('Access-Control-Allow-Methods', 'POST, GET, OPTIONS');
-   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, requestNumber'); // Add 'requestNumber' to the allowed headers
-   res.setHeader('Access-Control-Allow-Credentials', 'true');
+const server = http.createServer((req, res) => {
+  // Set CORS headers
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'POST, GET, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, requestNumber'); // Add 'requestNumber' to the allowed headers
+  res.setHeader('Access-Control-Allow-Credentials', 'true'); // Allow credentials
 
-  // Handle OPTIONS method (pre-flight request)
-  if (req.method.toUpperCase() === 'OPTIONS') {
-    res.statusCode = 204; // No content
-    res.end();
-    return;
+  // Handle preflight requests
+  if (req.method === 'OPTIONS') {
+      res.writeHead(200);
+      res.end();
+      return;
   }
+
+  const parsedUrl = url.parse(req.url, true);
+  const pathname = parsedUrl.pathname;
+
+  if (req.method === 'POST' && pathname === '/api/definitions/') {
+      handlePostRequest(req, res);
+  } else if (req.method === 'GET' && pathname === '/api/definitions/') {
+      handleGetRequest(parsedUrl.query, res);
+  } else {
+      res.writeHead(404, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'Not Found' }));
+  }
+});
 
   const { pathname, query } = new URL(req.url, `http://${req.headers.host}`);
   const path = pathname.replace(/^\/+|\/+$/g, '');
