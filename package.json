@@ -10,6 +10,7 @@
   "keywords": [],
   "description": "",
   "dependencies": {
+    "querystring": "^0.2.1",
     "string_decoder": "^1.3.0"
   }
 }
