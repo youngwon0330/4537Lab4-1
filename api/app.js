@@ -1,17 +1,28 @@
-// api/definitions.js
 const { StringDecoder } = require('string_decoder');
 const decoder = new StringDecoder('utf-8');
 
-// 단순 예시를 위한 메모리 기반 딕셔너리
+// Simple in-memory dictionary for example purposes
 let dictionary = {};
 let requestCounter = 0;
 
 module.exports = async (req, res) => {
+  // Set CORS headers
+  res.setHeader('Access-Control-Allow-Origin', '*'); // Allow all origins
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+
+  // Handle OPTIONS method (pre-flight request)
+  if (req.method.toUpperCase() === 'OPTIONS') {
+    res.statusCode = 204; // No content
+    res.end();
+    return;
+  }
+
   const { pathname, query } = new URL(req.url, `http://${req.headers.host}`);
   const path = pathname.replace(/^\/+|\/+$/g, '');
   const method = req.method.toUpperCase();
 
-  requestCounter++; // 요청 카운터 증가
+  requestCounter++; // Increment request counter
 
   if (path === 'definitions') {
     if (method === 'POST') {
@@ -19,6 +30,7 @@ module.exports = async (req, res) => {
       for await (const chunk of req) {
         buffer += decoder.write(chunk);
       }
+      buffer += decoder.end();
 
       const { word, definition } = JSON.parse(buffer);
       if (!word || !definition || typeof word !== 'string' || typeof definition !== 'string') {
@@ -42,7 +54,7 @@ module.exports = async (req, res) => {
         }));
       }
     } else if (method === 'GET' && query.word) {
-      const { word } = query;
+      const word = query.word;
       const definition = dictionary[word];
 
       if (definition) {
