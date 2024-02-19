@@ -26,7 +26,7 @@ const webServer = httpLib.createServer((request, response) => {
     return;
   }
 
-  if (endpoint === "/api/definitions" && request.method === "GET") {
+  if (endpoint === "/api/definitions/" && request.method === "GET") {
     // Attempt to find a word's definition
     const searchTerm = queryParameters.word.toLowerCase();
     const foundDefinition = wordBank.find((item) => item.word === searchTerm);

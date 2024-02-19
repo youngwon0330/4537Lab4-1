@@ -18,6 +18,18 @@
           "headers": {
             "Access-Control-Allow-Origin": "*"
           }
-      }
+        },
+      {
+        "src": "/api/definitions/",
+        "methods": [
+            "GET",
+            "POST",
+            "OPTIONS"
+        ],
+        "dest": "/api/app.js",
+        "headers": {
+          "Access-Control-Allow-Origin": "*"
+        }
+    }
   ]
 }
